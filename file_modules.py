@@ -17,6 +17,9 @@ def get_dataset_path():
     return dataset_path
 
 
+dataset_path = get_dataset_path()
+
+
 def read_unlabeled_json(file_name):
     print("Method: read_unlabeled_json(file_name)")
     unlabeled_tweets_dict = OrderedDict()
@@ -29,13 +32,85 @@ def read_unlabeled_json(file_name):
                 tweet_text = line["text"]
             tweet_text = unicodedata.normalize('NFKD', tweet_text).encode(
                 'ascii', 'ignore').decode("utf-8")
-            parsed_tweet = mm.parse_tweet(tweet_text)
-            tweet_id = line["id"]
-            unlabeled_tweets_dict[str(tweet_id)] = line
-            unlabeled_tweets_dict[parsed_tweet] = parsed_tweet
-            unlabeled_tweets_dict[str(tweet_id)]['classes'] = []
+            unlabeled_tweets_dict[line["id"]] = line
+            unlabeled_tweets_dict["parsed_text"] = mm.parse_tweet(tweet_text)
+            unlabeled_tweets_dict[line["id"]]['classes'] = []
     f.close()
     return unlabeled_tweets_dict
+
+
+def read_labeled(labeled_file):
+    print("Reading labeled Data from file: ",labeled_file)
+    if os.path.isfile(labeled_file + "parsed_train" + ".json") and\
+            os.path.isfile(labeled_file + "parsed_validation" + ".json")\
+            and os.path.isfile(labeled_file + "parsed_test" + ".json"):
+        train = read_json(labeled_file + "parsed_train")
+        validation = read_json(labeled_file + "parsed_validation")
+        test = read_json(labeled_file + "parsed_test")
+    elif os.path.isfile(labeled_file + "train" + ".json") and\
+            os.path.isfile(labeled_file + "validation" + ".json") and\
+            os.path.isfile(labeled_file + "test" + ".json"):
+        train = read_json(labeled_file + "train")
+        validation = read_json(labeled_file + "validation")
+        test = read_json(labeled_file + "test")
+
+        train = mm.parse_tweets(train)
+        validation = mm.parse_tweets(validation)
+        test = mm.parse_tweets(test)
+
+        save_json(train, labeled_file + "parsed_train")
+        save_json(validation, labeled_file + "parsed_validation")
+        save_json(test, labeled_file + "parsed_test")
+    elif os.path.isfile(labeled_file + ".json"):
+        labeled_dict = read_json(labeled_file)
+        train, validation, test = train_test_read_split(labeled_dict)
+        save_json(train, labeled_file + "train")
+        save_json(validation, labeled_file + "validation")
+        save_json(test, labeled_file + "test")
+
+        train = mm.parse_tweets(train)
+        validation = mm.parse_tweets(validation)
+        test = mm.parse_tweets(test)
+
+        save_json(train, labeled_file + "parsed_train")
+        save_json(validation, labeled_file + "parsed_validation")
+        save_json(test, labeled_file + "parsed_test")
+    else:
+        smerp_labeled = mm.read_smerp_labeled()
+        save_json(smerp_labeled, labeled_file)
+        train, validation, test = train_test_read_split(labeled_file)
+        print("Number of labeled tweets: ", len(smerp_labeled))
+
+        save_json(train, labeled_file + "train")
+        save_json(validation, labeled_file + "validation")
+        save_json(test, labeled_file + "test")
+
+        train = mm.parse_tweets(train)
+        validation = mm.parse_tweets(validation)
+        test = mm.parse_tweets(test)
+
+        save_json(train, labeled_file + "parsed_train")
+        save_json(validation, labeled_file + "parsed_validation")
+        save_json(test, labeled_file + "parsed_test")
+    return train, validation, test
+
+
+def read_smerp_labeled():
+    file_names = [0,1,2,3]
+    lab = OrderedDict()
+    for file in file_names:
+        # print("Reading file: ","smerp"+str(file)+".json")
+        single = read_json_array("smerp"+str(file))
+        for i, val in single.items():
+            if i in lab:
+                lab[i]["classes"].append(file)
+            else:
+                lab[i]=val
+                lab[i]["classes"]=[]
+                lab[i]["classes"].append(file)
+        # print("Finished file: ","smerp"+str(file)+".json")
+        # lab = merge_dicts(lab,single)
+    return lab
 
 
 def read_json_array(json_array_file):
@@ -44,33 +119,16 @@ def read_json_array(json_array_file):
     data = open(json_array_file + '.json')
     f = json.load(data)
     for line in f:
-        urls = []
-        hashtags = []
-        users = []
+        line = json.loads(line)
         try:
             tweet_text = line["retweeted_status"]["text"]
         except KeyError:
             tweet_text = line["text"]
         tweet_text = unicodedata.normalize('NFKD', tweet_text).encode('ascii',
-                                                                      'ignore').decode(
-            "utf-8")
-        parsed_tweet = mm.parse_tweet(tweet_text)
-        tweet_id = line["id"]
-        retweet_count = line["retweet_count"]
-        for url in line["entities"]["urls"]:
-            urls.append(url["expanded_url"])
-        for hashtag in line["entities"]["hashtags"]:
-            hashtags.append(hashtag["text"])
-        for user in line["entities"]["user_mentions"]:
-            users.append(user["screen_name"])
-        json_array[str(tweet_id)] = OrderedDict()
-        json_array[str(tweet_id)]['text'] = tweet_text
-        json_array[str(tweet_id)]['parsed_tweet'] = parsed_tweet
-        json_array[str(tweet_id)]['retweet_count'] = retweet_count
-        json_array[str(tweet_id)]['urls'] = urls
-        json_array[str(tweet_id)]['hashtags'] = hashtags
-        json_array[str(tweet_id)]['users'] = users
-        json_array[str(tweet_id)]['classes'] = []
+                                           'ignore').decode("utf-8")
+        json_array[line["id"]] = line
+        json_array[line["id"]]['parsed_tweet'] = mm.parse_tweet(tweet_text)
+        json_array[line["id"]]['classes'] = []
     return json_array
 
 
@@ -104,20 +162,20 @@ def read_file(file_name, mode='r', tag=False):
     return data
 
 
-def read_file_folder(folder,mode='r'):
+def read_file_folder(folder, mode='r'):
     """Reads all files in a folder"""
     files_dict = OrderedDict()
     import glob
-    files = glob.glob(folder+'/*.txt')
+    files = glob.glob(folder + '/*.txt')
     for file_name in files:
-        files_dict[file_name] = read_file(os.path.join(folder,file_name),mode=mode)
+        files_dict[file_name] = read_file(os.path.join(folder, file_name),
+                                          mode=mode)
     return files_dict
 
 
 def save_json(data, filename, tag=False):
     try:
         if tag:
-            # date_time_tag = get_date_time_tag()
             with open(date_time_tag + filename + ".json", 'w') as outfile:
                 outfile.write(json.dumps(data, indent=4))
             outfile.close()
@@ -132,15 +190,10 @@ def save_json(data, filename, tag=False):
         print("Failure reason: ", e)
         print("Writing file as plain text: ", filename + ".txt")
         if tag:
-            # date_time_tag = get_date_time_tag()
-            with open(date_time_tag + filename + ".txt", 'w') as outfile:
-                outfile.write(str(data))
-            outfile.close()
+            write_file(data,filename,tag=True)
             return False
         else:
-            with open(date_time_tag + filename + ".txt", 'w') as outfile:
-                outfile.write(str(data))
-            outfile.close()
+            write_file(data,filename)
             return False
 
 
@@ -156,87 +209,26 @@ def read_json(filename, alternate=None):
         alternate = read_json(alternate)
         return alternate
     else:
-        print("Warning:", filename + " does not exist.")
+        print("Warning: Could not open file: " + filename)
         return False
 
 
-def read_labeled(labeled_file):
-    print("Reading SMERP labeled Data")
-    if os.path.isfile(labeled_file + "parsed_train" + ".json") and\
-            os.path.isfile(labeled_file + "parsed_validation" + ".json")\
-            and os.path.isfile(labeled_file + "parsed_test" + ".json"):
-        train = read_json(labeled_file + "parsed_train")
-        validation = read_json(labeled_file + "parsed_validation")
-        test = read_json(labeled_file + "parsed_test")
-    elif os.path.isfile(labeled_file + "train" + ".json") and \
-            os.path.isfile(labeled_file + "validation" + ".json") and\
-            os.path.isfile(labeled_file + "test" + ".json"):
-        train = read_json(labeled_file + "train")
-        validation = read_json(labeled_file + "validation")
-        test = read_json(labeled_file + "test")
-
-        train = mm.parse_tweets(train)
-        validation = mm.parse_tweets(validation)
-        test = mm.parse_tweets(test)
-
-        save_json(train, labeled_file + "parsed_train")
-        save_json(validation, labeled_file + "parsed_validation")
-        save_json(test, labeled_file + "parsed_test")
-    elif os.path.isfile(labeled_file + ".json"):
-        labeled_dict = read_json(labeled_file)
-        train, validation, test = train_test_read_split(labeled_dict)
-        save_json(train, labeled_file + "train")
-        save_json(validation, labeled_file + "validation")
-        save_json(test, labeled_file + "test")
-
-        train = mm.parse_tweets(train)
-        validation = mm.parse_tweets(validation)
-        test = mm.parse_tweets(test)
-
-        save_json(train, labeled_file + "parsed_train")
-        save_json(validation, labeled_file + "parsed_validation")
-        save_json(test, labeled_file + "parsed_test")
-    else:
-        smerp_labeled = mm.read_smerp_labeled()
-        save_json(smerp_labeled, labeled_file)
-        train, validation, test = train_test_read_split(labeled_file)
-        print("Number of SMERP labeled tweets: ", len(smerp_labeled))
-
-        save_json(train, labeled_file + "train")
-        save_json(validation, labeled_file + "validation")
-        save_json(test, labeled_file + "test")
-
-        train = mm.parse_tweets(train)
-        validation = mm.parse_tweets(validation)
-        test = mm.parse_tweets(test)
-
-        save_json(train, labeled_file + "parsed_train")
-        save_json(validation, labeled_file + "parsed_validation")
-        save_json(test, labeled_file + "parsed_test")
-    return train, validation, test
-
-
-def train_test_read_split(data, test_size=0.3, validation_size=0.3,
-                          validation=True):
-    print(
-        "Method: train_test_read_split(dict,test_size=0.3,"
-        "validation_size=0.3,validation=True)")
-    # Reading Labelled Data (Randomized):
-    print("Reading Labelled Data (Randomized)")
-    train, test = mm.split_data(data, test_size)
-    if validation:
-        train, validation = mm.split_data(train, validation_size)
-        return train, validation, test
-    # print("train size:",len(train))
-    # print("validation size:",len(validation))
-    # print("test size:",len(test))
-    return train, test
+def train_test_read_split(data, test_size=0.3, validation_size=0.3):
+    """Splits json file into Train, Validation and Test"""
+    print("Method: train_test_read_split(dict,test_size=0.3,validation_size=0.3",
+          "validation=True)")
+    train,test=mm.split_data(data,test_size)
+    print("train size:",len(train))
+    print("test size:",len(test))
+    train,validation=mm.split_data(train,validation_size)
+    print("validation size:",len(validation))
+    return train,validation,test
 
 
 def main():
     dict1 = {1:{}, 2:{}}
     dict1 = OrderedDict(dict1)
-    dict1 = tag_dict(dict1, 'h')
+    dict1 = mm.tag_dict(dict1, 'h')
     print(dict1)
     pass
 

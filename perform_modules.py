@@ -13,6 +13,9 @@ def sklearn_metrics(actual,predicted,class_names=None,digits=4):
 
     results = OrderedDict()
 
+    if len(actual) != len(predicted):
+        print("actual, predicted length not same: ",len(actual),len(predicted))
+
     results["f1_macro"] = f1_score(actual,predicted,average='macro')
     results["f1_micro"] = f1_score(actual,predicted,average='micro')
     results["accuracy"] = accuracy_score(actual,predicted)
@@ -26,6 +29,7 @@ def sklearn_metrics(actual,predicted,class_names=None,digits=4):
 
     # print('accuracy_score: ','\x1b[1;31m',results["accuracy"],'\x1b[0m')
     print('accuracy_score: ',results["accuracy"])
+    print("")
     print("\t\t\t Macro,\t\t\t Micro")
     print("\t\t\t -----,\t\t\t -----")
     # print("Precision:\t\t",results["precision_macro"],"\t",results["precision_micro"])
@@ -34,6 +38,7 @@ def sklearn_metrics(actual,predicted,class_names=None,digits=4):
     # print("Precision: ",results["Precision"])
     # print("Recall: ",results["Recall"])
     # print("F1: ",results["F1"])
+    print("")
     if class_names:
         print(classification_report(y_true=actual,y_pred=predicted,target_names=class_names,digits=digits))
     else:

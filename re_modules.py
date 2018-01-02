@@ -1,5 +1,4 @@
 import re
-import my_modules as mm
 
 
 def contains_phone(text):
@@ -21,39 +20,41 @@ def contains_phone(text):
         return text
 
 
-emoticons_str=r'''
-    (?:
-        [:=;] # Eyes
-        [oO\-]? # Nose (optional)
-        [D\)\]\(\]/\\OpP] # Mouth
-    )'''
-regex_str=[
-    emoticons_str,
-    r'<[^>]+>', # HTML tags
-    r'(?:@[\w_]+)', # @-mentions
-    r"(?:\#+[\w_]+[\w\'_\-]*[\w_]+)" ,# hash-tags
-    r'http[s]?://(?:[a-z]|[0-9]|[$-_@.&amp;+]|[!*\(\),]|(?:%[0-9a-f]['
-    r'0-9a-f]))+', # URLs
-    r'(?:(?:\d+,?)+(?:\.?\d+)?)', # numbers
-    r"(?:[a-z][a-z'\-_]+[a-z])", # words with - and '
-    r'(?:[\w_]+)', # other words
-    r'(?:\S)'  # anything else
-]
-tokens_re  =re.compile(r'('+'|'.join(regex_str)+')',re.VERBOSE | re.IGNORECASE)
-emoticon_re=re.compile(r'^'+emoticons_str+'$',re.VERBOSE | re.IGNORECASE)
 
 
 def preprocess(s,lowercase=False):
     # print("Method: preprocess(s,lowercase=False)")
+    emoticons_str=r'''
+        (?:
+            [:=;] # Eyes
+            [oO\-]? # Nose (optional)
+            [D\)\]\(\]/\\OpP] # Mouth
+        )'''
+    regex_str=[
+        emoticons_str,
+        r'<[^>]+>', # HTML tags
+        r'(?:@[\w_]+)', # @-mentions
+        r"(?:\#+[\w_]+[\w\'_\-]*[\w_]+)" ,# hash-tags
+        r'http[s]?://(?:[a-z]|[0-9]|[$-_@.&amp;+]|[!*\(\),]|(?:%[0-9a-f]['
+        r'0-9a-f]))+', # URLs
+        r'(?:(?:\d+,?)+(?:\.?\d+)?)', # numbers
+        r"(?:[a-z][a-z'\-_]+[a-z])", # words with - and '
+        r'(?:[\w_]+)', # other words
+        r'(?:\S)'  # anything else
+    ]
+    tokens_re  =re.compile(r'('+'|'.join(regex_str)+')',re.VERBOSE | re.IGNORECASE)
+    emoticon_re=re.compile(r'^'+emoticons_str+'$',re.VERBOSE | re.IGNORECASE)
+
     tokens=tokens_re.findall(str(s))
     if lowercase:
-        tokens=[token if emoticon_re.search(token) else token.lower() for token in tokens]
-    tokens = mm.remove_stopwords(tokens)
+        tokens=[token if emoticon_re.search(token) else token.lower() for token
+                in tokens]
     return tokens
 
 
 def main():
-    pass
+    s="Haryana government will send food package and 25.3 blankets in Nepal 1230,1485 http://t.co/hAiN2bMSQ3"
+    print(preprocess(s,lowercase=False))
 
 
 if __name__ == "__main__": main()

@@ -9,4 +9,5 @@ setup(name='my_modules',
       license='MIT',
       packages=['my_modules'],
       zip_safe=False,
-      install_requires=['textblob', 'numpy', 'nltk', 'scikit-learn'])
+      install_requires=['textblob', 'numpy', 'nltk', 'scikit-learn', 'gensim',
+                        'spacy'])
