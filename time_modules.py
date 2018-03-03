@@ -7,15 +7,16 @@ if platform.system() == 'Windows':
 else:
     sys.path.append('/home/cs16resch01001/codes')
     sys.path.append('/home/cs16resch01001/datasets')
-print(platform.system(),"os detected.")
+# print(platform.system(),"os detected.")
 
 
-def get_date_time_tag(current_file_name=os.path.basename(__file__)):
+def get_date_time_tag(current_file_name=False):
     from datetime import datetime
     date_time = datetime.now().strftime('%Y%m%d %H%M%S')
-    if not current_file_name:
-        current_file_name = os.path.basename(__file__)
-    return current_file_name+"_"+date_time+"_"
+    tag = str(date_time)+"_"
+    if current_file_name:
+        tag = current_file_name+"_"+str(date_time)+"_"
+    return tag
 
 
 date_time_tag = get_date_time_tag()

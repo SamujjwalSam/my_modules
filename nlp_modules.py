@@ -13,16 +13,45 @@ entity_types = ['PERSON','NORP','FACILITY','ORG','GPE','LOC','PRODUCT','EVENT',
                 'WORK_OF_ART','LAW','LANGUAGE','DATE','TIME','PERCENT','MONEY',
                 'QUANTITY','ORDINAL','CARDINAL','PER','MISC']
 
+def process_dict_spacy(train):
+    print("Method: process_dict_spacy(train)")
+    import spacy
+    from collections import OrderedDict
+    try:
+        nlp = spacy.load('en')
+    except Exception as e:
+        nlp = spacy.load('en_core_web_sm')
+    
+    # from textblob import TextBlob
+
+    for id, val in train.items():
+        # print(id)
+        twt = val['parsed_tweet']
+        # twt = TextBlob(twt)
+        # twt = twt.correct()
+        # doc = nlp(str(twt))
+        doc = nlp(twt)
+        pos = []
+        lemmas = []
+        for token in doc:
+            pos.append(token.pos_)
+            lemmas.append(token.lemma_)
+        val['lemma'] = " ".join(lemmas)
+        val['pos'] = pos
+
+    return train
+
 
 def process_spacy(s,entity=False):
     import spacy
     from collections import OrderedDict
+    try:
+        nlp = spacy.load('en')
+    except Exception as e:
+        nlp = spacy.load('en_core_web_sm')
 
-
-    print(mm.tokenize(s, lowercase=False, remove_emoticons=True))
-    print(len(mm.tokenize(s, lowercase=False, remove_emoticons=True)))
-    nlp = spacy.load('en')
     doc = nlp(s)
+    print(doc)
 
     result = OrderedDict()
     tokens = []
@@ -37,9 +66,6 @@ def process_spacy(s,entity=False):
     result["tokens"] = tokens
     result["pos"] = pos
     result["lemmas"] = lemmas
-    print(tokens)
-    print(len(tokens))
-    print("".join(tokens))
 
     if entity:
         labels=[]
@@ -95,7 +121,6 @@ def spelling_correction(tweet):
 def main():
     s = '#NepalEarthquake India plz 1230,1485 #NDRF team, -2 dogs and 3.2 tonnes equipment to Nepal-Army for rescue operations: Indian Embassy'
     # print(find_phone(s,replace=""))
-    # exit(0)
     # print(spelling_correction(s))
 
     print(process_spacy(s))

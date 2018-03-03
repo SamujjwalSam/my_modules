@@ -13,10 +13,8 @@ def get_dataset_path():
         dataset_path = 'D:\Datasets'
     else:
         dataset_path = '/home/cs16resch01001/datasets'
-    print(platform.system(), "os detected.")
+    # print(platform.system(), "os detected.")
     return dataset_path
-
-
 dataset_path = get_dataset_path()
 
 
@@ -33,23 +31,69 @@ def read_unlabeled_json(file_name):
             tweet_text = unicodedata.normalize('NFKD', tweet_text).encode(
                 'ascii', 'ignore').decode("utf-8")
             unlabeled_tweets_dict[line["id"]] = line
+            # TODO: read ids with "id" key. No need to change structure at all.
+            # TODO: Only add parsed_text, classes and features
             unlabeled_tweets_dict["parsed_text"] = mm.parse_tweet(tweet_text)
             unlabeled_tweets_dict[line["id"]]['classes'] = []
     f.close()
     return unlabeled_tweets_dict
 
 
-def read_labeled(labeled_file):
-    print("Reading labeled Data from file: ",labeled_file)
-    if os.path.isfile(labeled_file + "parsed_train" + ".json") and\
-            os.path.isfile(labeled_file + "parsed_validation" + ".json")\
-            and os.path.isfile(labeled_file + "parsed_test" + ".json"):
+def read_unlabeled_json_nochange(file_name):
+    print("Method: read_unlabeled_json(file_name)")
+    unlabeled_tweets_dict = OrderedDict()
+    with open(file_name + ".json", encoding="utf-8") as f:
+        for line in f:
+            line = json.loads(line)
+            try:
+                tweet_text = line["retweeted_status"]["text"]
+            except KeyError:
+                tweet_text = line["text"]
+            tweet_text = unicodedata.normalize('NFKD', tweet_text).encode(
+                                               'ascii', 'ignore').decode("utf-8")
+            unlabeled_tweets_dict["parsed_text"] = mm.parse_tweet(tweet_text)
+            unlabeled_tweets_dict[line["id"]]['classes'] = []
+    f.close()
+    return unlabeled_tweets_dict
+
+
+def read_labeled(labeled_file,n_classes=7,k_similar=15,k_unique_words=25):
+    # print("Reading labeled Data from file: ",labeled_file)
+    if os.path.isfile(labeled_file+"features_train"+".json") and \
+        os.path.isfile(labeled_file+"features_validation"+".json")and \
+        os.path.isfile(labeled_file+"features_test"+".json"):
+        print("Reading labeled Data from file: ",labeled_file+"features_validation"+".json")
+        train=mm.read_json(labeled_file+"features_train")
+        validation=mm.read_json(labeled_file+"features_validation")
+        test=mm.read_json(labeled_file+"features_test")
+    elif os.path.isfile(labeled_file + "parsed_train" + ".json") and\
+        os.path.isfile(labeled_file + "parsed_validation" + ".json") and\
+        os.path.isfile(labeled_file + "parsed_test" + ".json"):
+        print("Reading labeled Data from file: ",labeled_file+"parsed_validation"+".json")
         train = read_json(labeled_file + "parsed_train")
         validation = read_json(labeled_file + "parsed_validation")
         test = read_json(labeled_file + "parsed_test")
+
+        save_json(train, labeled_file + "parsed_train")
+        save_json(validation, labeled_file + "parsed_validation")
+        save_json(test, labeled_file + "parsed_test")
+
+        mm.derived_features(train,validation,test,n_classes,k_similar)
+
+        total_corpus,class_corpuses = mm.create_corpus(train,n_classes)
+        unique_words = mm.unique_words_class(class_corpuses,k_unique_words)
+
+        mm.manual_features(train,unique_words,n_classes)
+        mm.manual_features(validation,unique_words,n_classes)
+        mm.manual_features(test,unique_words,n_classes)
+
+        mm.save_json(train,labeled_file+"features_train")
+        mm.save_json(validation, labeled_file + "features_validation")
+        mm.save_json(test,labeled_file+"features_test")
     elif os.path.isfile(labeled_file + "train" + ".json") and\
-            os.path.isfile(labeled_file + "validation" + ".json") and\
-            os.path.isfile(labeled_file + "test" + ".json"):
+        os.path.isfile(labeled_file + "validation" + ".json") and\
+        os.path.isfile(labeled_file + "test" + ".json"):
+        print("Reading labeled Data from file: ",labeled_file+"validation"+".json")
         train = read_json(labeled_file + "train")
         validation = read_json(labeled_file + "validation")
         test = read_json(labeled_file + "test")
@@ -61,7 +105,21 @@ def read_labeled(labeled_file):
         save_json(train, labeled_file + "parsed_train")
         save_json(validation, labeled_file + "parsed_validation")
         save_json(test, labeled_file + "parsed_test")
+
+        mm.derived_features(train,validation,test,n_classes,k_similar)
+
+        total_corpus,class_corpuses = mm.create_corpus(train,n_classes)
+        unique_words = mm.unique_words_class(class_corpuses,k_unique_words)
+
+        mm.manual_features(train,unique_words,n_classes)
+        mm.manual_features(validation,unique_words,n_classes)
+        mm.manual_features(test,unique_words,n_classes)
+
+        mm.save_json(train,labeled_file+"features_train")
+        mm.save_json(validation, labeled_file + "features_validation")
+        mm.save_json(test,labeled_file+"features_test")
     elif os.path.isfile(labeled_file + ".json"):
+        print("Reading labeled Data from file: ",labeled_file + ".json")
         labeled_dict = read_json(labeled_file)
         train, validation, test = train_test_read_split(labeled_dict)
         save_json(train, labeled_file + "train")
@@ -75,6 +133,19 @@ def read_labeled(labeled_file):
         save_json(train, labeled_file + "parsed_train")
         save_json(validation, labeled_file + "parsed_validation")
         save_json(test, labeled_file + "parsed_test")
+
+        mm.derived_features(train,validation,test,n_classes,k_similar)
+
+        total_corpus,class_corpuses = mm.create_corpus(train,n_classes)
+        unique_words = mm.unique_words_class(class_corpuses,k_unique_words)
+
+        mm.manual_features(train,unique_words,n_classes)
+        mm.manual_features(validation,unique_words,n_classes)
+        mm.manual_features(test,unique_words,n_classes)
+
+        mm.save_json(train,labeled_file+"features_train")
+        mm.save_json(validation, labeled_file + "features_validation")
+        mm.save_json(test,labeled_file+"features_test")
     else:
         smerp_labeled = mm.read_smerp_labeled()
         save_json(smerp_labeled, labeled_file)
@@ -92,6 +163,20 @@ def read_labeled(labeled_file):
         save_json(train, labeled_file + "parsed_train")
         save_json(validation, labeled_file + "parsed_validation")
         save_json(test, labeled_file + "parsed_test")
+
+        mm.derived_features(train,validation,test,n_classes,k_similar)
+
+        total_corpus,class_corpuses = mm.create_corpus(train,n_classes)
+        unique_words = mm.unique_words_class(class_corpuses,k_unique_words)
+
+        mm.manual_features(train,unique_words,n_classes)
+        mm.manual_features(validation,unique_words,n_classes)
+        mm.manual_features(test,unique_words,n_classes)
+
+        mm.save_json(train,labeled_file+"features_train")
+        mm.save_json(validation, labeled_file + "features_validation")
+        mm.save_json(test,labeled_file+"features_test")
+
     return train, validation, test
 
 
@@ -126,9 +211,34 @@ def read_json_array(json_array_file):
             tweet_text = line["text"]
         tweet_text = unicodedata.normalize('NFKD', tweet_text).encode('ascii',
                                            'ignore').decode("utf-8")
-        json_array[line["id"]] = line
-        json_array[line["id"]]['parsed_tweet'] = mm.parse_tweet(tweet_text)
-        json_array[line["id"]]['classes'] = []
+        json_array[line["id_str"]] = line
+        # TODO: read ids with "id" key. No need to change structure at all.
+        # TODO: Only add parsed_text, classes and features
+        json_array[line["id_str"]]['parsed_tweet'] = mm.parse_tweet(tweet_text)
+        json_array[line["id_str"]]['classes'] = []
+    return json_array
+
+
+def read_json_array_nochange(json_array_file,label=False):
+    print("Method: read_json_array(json_array_file)")
+    json_array = OrderedDict()
+    data = open(json_array_file + '.json')
+    data = json.load(data)
+    for line in data:
+        # line = json.loads(line)
+        # print(line)
+        try:
+            tweet_text = line["retweeted_status"]["text"]
+        except KeyError:
+            tweet_text = line["text"]
+        tweet_text = unicodedata.normalize('NFKD', tweet_text).encode('ascii',
+                                           'ignore').decode("utf-8")
+        json_array[line["id_str"]] = line
+        json_array[line["id_str"]]['parsed_tweet'] = mm.parse_tweet(tweet_text)
+        if label:
+            json_array[line["id_str"]]['classes'] = [label]
+        else:
+            json_array[line["id_str"]]['classes'] = []
     return json_array
 
 
@@ -162,11 +272,11 @@ def read_file(file_name, mode='r', tag=False):
     return data
 
 
-def read_file_folder(folder, mode='r'):
-    """Reads all files in a folder"""
+def read_files_folder(folder, mode='r',type='json'):
+    """Reads all [type] files in a folder"""
     files_dict = OrderedDict()
     import glob
-    files = glob.glob(folder + '/*.txt')
+    files = glob.glob(folder + '/*.'+type)
     for file_name in files:
         files_dict[file_name] = read_file(os.path.join(folder, file_name),
                                           mode=mode)
@@ -198,7 +308,7 @@ def save_json(data, filename, tag=False):
 
 
 def read_json(filename, alternate=None):
-    print("Reading JSON file: ", filename + ".json")
+    # print("Reading JSON file: ", filename + ".json")
     if os.path.isfile(filename + ".json"):
         with open(filename + ".json", encoding="utf-8") as file:
             json_dict = OrderedDict(json.load(file))
@@ -223,6 +333,52 @@ def train_test_read_split(data, test_size=0.3, validation_size=0.3):
     train,validation=mm.split_data(train,validation_size)
     print("validation size:",len(validation))
     return train,validation,test
+
+
+def save_pickle(data, pkl_file, tag=False):
+    """saves python object as pickle file"""
+    print("Method: save_pickle(data, pkl_file, tag=False)")
+    print("Writing to pickle file: ", pkl_file)
+    import pickle
+    try:
+        if tag:
+            if os.path.isfile(date_time_tag + pkl_file):
+                print("Overwriting on pickle file: ", date_time_tag + pkl_file)
+            with open(date_time_tag + pkl_file, 'wb') as outfile:
+                pickle.dump(data, outfile)
+            outfile.close()
+            return True
+        else:
+            if os.path.isfile(pkl_file):
+                print("Overwriting on pickle file: ", pkl_file)
+            with open(pkl_file, 'wb') as outfile:
+                pickle.dump(data, outfile)
+            outfile.close()
+            return True
+    except Exception as e:
+        print("Could not write to pickle file: ", pkl_file)
+        print("Failure reason: ", e)
+        return False
+
+
+def load_pickle(pkl_file):
+    """Loads pickle file to python"""
+    print("Method: load_pickle(pkl_file)")
+    print("Reading pickle file: ", pkl_file)
+    import pickle
+    if os.path.isfile(pkl_file):
+        with open(pkl_file, 'rb') as outfile:
+            loaded = pickle.load(outfile)
+        return loaded
+    else:
+        print("Warning: Could not open file: " + pkl_file)
+        return False
+
+
+def read_results(result_file_name):
+    if result_file_name.endswith('.json'):
+        name,ext = os.path.splitext(result_file_name)
+        dataset,param,value = name.split()
 
 
 def main():

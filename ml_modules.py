@@ -14,7 +14,7 @@ def select_tweets(test_unlabeled, unlabeled_pred, unlabeled_proba,
     if len(test_unlabeled) != len(unlabeled_pred) != len(unlabeled_proba):
         print("Lengths does not match: ", len(test_unlabeled),
               len(unlabeled_pred), len(unlabeled_proba))
-        exit(0)
+        return False
 
     labelled_selected = OrderedDict()
     for i, (id, val) in enumerate(test_unlabeled.items()):
@@ -44,7 +44,7 @@ def max_add_unlabeled(train, test_unlabeled, unlabeled_pred, unlabeled_proba,
     if len(test_unlabeled) != len(unlabeled_pred) != len(unlabeled_proba):
         print("Lengths does not match: ", len(test_unlabeled),
               len(unlabeled_pred), len(unlabeled_proba))
-        exit(0)
+        return False
 
     print("Predicted class proportions:",
           mm.count_class(unlabeled_pred, n_classes))
@@ -144,6 +144,124 @@ def supervised(train, test, train_tfidf_matrix, test_tfidf_matrix, n_classes,
     return None, mlb.inverse_transform(SVM_pred), SVM_proba
 
 
+def supervised_bin(train,test,train_tfidf_matrix,test_tfidf_matrix,n_classes,
+                   class_id,init_C=10,metric=False,grid=True):
+    print("Method: supervised_bin(train,test,train_tfidf_matrix,"
+          "test_tfidf_matrix,init_C=10,probability=True,"
+          "metric=False,grid=True)")
+    from sklearn.svm import SVC
+    from sklearn.multiclass import OneVsRestClassifier
+
+    train_labels = []
+    for i,val in train.items():
+        if class_id in val["classes"]:
+            train_labels.append(True)
+        else:
+            train_labels.append(False)
+
+    print("\nAlgorithm: \t \t \t SVM")
+    SVM = SVC(kernel='linear', C=init_C, probability=True)
+    if grid:
+        print("Performing grid search...")
+        SVM_params = [{'C':[10000, 1000, 100, 10, 1]},]
+        SVM_grid = grid_search(SVM,SVM_params,train_tfidf_matrix,train_labels)
+        SVM = SVC(kernel='linear',C=SVM_grid['params']['C'],probability=True)
+    SVM_fit = SVM.fit(train_tfidf_matrix, train_labels)
+    SVM_pred = SVM_fit.predict(test_tfidf_matrix)
+    SVM_proba = SVM_fit.predict_proba(test_tfidf_matrix)
+
+    if metric:
+        result = OrderedDict()
+        # test_labels = [vals["classes"] for id, vals in test.items()]
+        test_labels = []
+        for i,val in test.items():
+            if class_id in val["classes"]:
+                test_labels.append(True)
+            else:
+                test_labels.append(False)
+
+        mm.accuracy_multi(test_labels, SVM_pred,n_classes,multi=False)
+        result["SVM_metric"] = mm.sklearn_metrics(test_labels, SVM_pred)
+        return result, SVM_pred, SVM_proba
+    return None, SVM_pred, SVM_proba
+
+
+def supervised2(params,pkl_file=False):
+    print("Method: supervised(train,test,train_tfidf_matrix,"
+          "test_tfidf_matrix,init_C=10,probability=True,"
+          "metric=False,grid=True)")
+    from sklearn.preprocessing import MultiLabelBinarizer
+    from sklearn.svm import SVC
+    from sklearn.multiclass import OneVsRestClassifier
+    # from scipy.stats import randint as sp_randint
+
+    train = params["train"]
+    test = params["test"]
+    train_tfidf_matrix = params["train_tfidf_matrix"]
+    test_tfidf_matrix = params["test_tfidf_matrix"]
+    n_classes = params["n_classes"]
+    init_C = params["init_C"]
+    metric = params["metric"]
+
+    mlb = MultiLabelBinarizer()
+    train_labels = [vals["classes"] for id, vals in train.items()]
+    train_labels_bin = mlb.fit_transform(train_labels)
+
+    print("\nAlgorithm: \t \t \t SVM")
+    SVM = None
+    if pkl_file:
+        if os.path.isfile(pkl_file):
+            SVM = load_pickle(pkl_file)
+    else:
+        SVM = OneVsRestClassifier(SVC(kernel='linear', C=init_C, probability=True))
+        pkl_file = "SVM"
+        save_pickle(SVM, pkl_name, tag=False)
+
+    SVM_fit = SVM.fit(train_tfidf_matrix, train_labels_bin)
+    SVM_pred = SVM_fit.predict(test_tfidf_matrix)
+    SVM_proba = SVM_fit.predict_proba(test_tfidf_matrix)
+
+    if metric:
+        result = OrderedDict()
+        test_labels = [vals["classes"] for id, vals in test.items()]
+        mm.accuracy_multi(test_labels, mlb.inverse_transform(SVM_pred),
+                          n_classes)
+        result["SVM_metric"] = mm.sklearn_metrics(
+            mlb.fit_transform(test_labels), SVM_pred)
+        return result, mlb.inverse_transform(SVM_pred), SVM_proba, SVM, pkl_file
+    return None, mlb.inverse_transform(SVM_pred), SVM_proba, SVM, pkl_file
+
+
+def supervised_parallel(train, test, train_tfidf_matrix, test_tfidf_matrix,
+    n_classes,init_C=10, metric=False):
+    from multiprocessing import Pool
+    from itertools import product
+
+
+    dataset = [10000, 1000, 100, 10, 1]
+    agents = len(dataset)
+    chunksize = 5
+
+    all = defaultdict()
+
+    all["train"] = train
+    all["test"] = test
+    all["train_tfidf_matrix"] = train_tfidf_matrix
+    all["test_tfidf_matrix"] = test_tfidf_matrix
+    all["n_classes"] = n_classes
+    all["init_C"] = init_C
+    all["metric"] = metric
+    all["dataset"] = dataset
+
+    result1 = pool.apply_async(solve1, [A])
+
+    with Pool(processes=agents) as pool:
+        result = pool.starmap(supervised2, all, chunksize)
+
+    # Output the result
+    print ('Result:  ' + str(result))
+
+
 def grid_search(model, params, X_train, y_train, cv=5, score='f1'):
     print("Method: grid_search(model,params,X_train,y_train,cv=5,score='f1')")
     from sklearn.model_selection import GridSearchCV
@@ -198,10 +316,10 @@ def grid_search_rand(model, params, X_train, y_train, cv=5, score='f1',
 
 def add_features_matrix(train, train_matrix, n_classes, derived=True,
                         manual=True, length=True, k_unique_words=25):
-    print("Method: add_features_matrix(train,train_matrix,lengths=False)")
+    print("Method: add_features_matrix(train, train_matrix, n_classes, derived=True, manual=True, length=True, k_unique_words=25)")
+    import json
     if manual:
         print("Adding Manual features...")
-
         loc = np.matrix(
             [[val["loc"] / val["word"]] for id, val in train.items()])
         new = np.concatenate((train_matrix, loc), axis=1)
@@ -342,16 +460,6 @@ def sim_tweet_class_vote(train, test, sim_vals, n_classes):
     return class_votes
 
 
-def create_corpus(data, n_classes):
-    print("Method: create_corpus(data,n_classes)")
-    total_corpus = []
-    class_corpuses = dict((key, []) for key in range(n_classes))
-    for id, vals in data.items():
-        total_corpus.append(vals["parsed_tweet"])
-        class_corpuses[vals["classes"][0]].append(vals["parsed_tweet"])
-    return total_corpus, class_corpuses
-
-
 def tf(word, blob):
     """computes "term frequency" which is the number of times a word appears
     in a document blob, normalized by dividing by the total number of
@@ -392,6 +500,7 @@ def nltk_install(name):
                 except LookupError:
                     print('Downloading NLTK data: ',name)
                     nltk.download(name)
+    return True
 
 
 def unique_words_class(class_corpuses, k_unique_words=25):
@@ -424,20 +533,30 @@ def unique_words_class(class_corpuses, k_unique_words=25):
     return unique_words
 
 
-def vectorizer(list_items, n_grams=1):
+# def sam_vectorizer(dict_items):
+
+
+
+def vectorizer(list_items,n_grams=1,min_df=1,dense=True,sublinear_tf=False,smooth_idf=True):
     from sklearn.feature_extraction.text import TfidfVectorizer
     from nltk.corpus import stopwords
     import string
 
-    stopword_list = stopwords.words('english') + list(string.punctuation) + [
-        'rt', 'via', '& amp', '&amp', 'mr']
+    # stopword_list = stopwords.words('english') + list(string.punctuation) + [
+        # 'rt', 'via', '& amp', '&amp', 'mr']
 
-    tfidf_vectorizer = TfidfVectorizer(strip_accents='unicode',
-                                       stop_words=stopword_list,
-                                       decode_error='ignore',
-                                       ngram_range=(1, n_grams))
+    tfidf_vectorizer = TfidfVectorizer(strip_accents= 'unicode',
+                                       min_df       = min_df,
+                                       # stop_words = stopword_list,
+                                       decode_error = 'ignore',
+                                       ngram_range  = (1, n_grams),
+                                       sublinear_tf = sublinear_tf,
+                                       smooth_idf   = smooth_idf)
 
     tfidf_matrix = tfidf_vectorizer.fit_transform(list_items)
+    if dense:
+        return tfidf_vectorizer, tfidf_matrix.todense()
+
     return tfidf_vectorizer, tfidf_matrix
 
 
@@ -449,6 +568,7 @@ def create_tf_idf(train, test, n_gram=1):
                                        decode_error='ignore',
                                        ngram_range=(1, n_gram))
     train_tfidf_matrix = tfidf_vectorizer.fit_transform([vals["parsed_tweet"] for twt_id,vals in train.items()])
+    # print(len(train),train_tfidf_matrix.shape)
     test_tfidf_matrix = tfidf_vectorizer.transform([vals["parsed_tweet"] for
                                                     twt_id, vals in
                                                     test.items()])
@@ -474,11 +594,13 @@ def unique_word_count_class(text, unique_words, n_classes):
     return cls_counts
 
 
-def derived_features(train, test, n_classes, k_similar=15):
+def derived_features(train,validation,test,n_classes,k_similar=15):
     sim_vals_train = k_similar_tweets(train, train, k_similar)
+    sim_vals_validation = k_similar_tweets(train, validation, k_similar)
     sim_vals_test = k_similar_tweets(train, test, k_similar)
 
     sim_tweet_class_vote(train, train, sim_vals_train, n_classes)
+    sim_tweet_class_vote(train, validation, sim_vals_validation, n_classes)
     sim_tweet_class_vote(train, test, sim_vals_test, n_classes)
 
 
@@ -594,16 +716,16 @@ def manual_features(train, unique_words, n_classes, feature_count=False):
 
 def classifier_agreement(c1_preds, c2_preds):
     assert (c1_preds.shape == c2_preds.shape)
-    c = 0
-    print(len(c1_preds))
+    correct = 0
+    # print(len(c1_preds))
     for i in range(c1_preds.shape[0]):
         for j in range(c1_preds.shape[1]):
             # print(c1_preds[i,j])
-            print(c1_preds[i])
+            # print(c1_preds[i])
             # print(c1_preds)
             if c1_preds[i, j] == c2_preds[i, j]:
-                c = c + 1
-    return c
+                correct = correct + 1
+    return correct
 
 
 def find_synms_list(words,c=None):
