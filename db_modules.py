@@ -13,7 +13,7 @@ def connect_sqllite(dataset_name,db_name):
         db = sqlite3.connect(path)
     except sqlite3.Error as er:
         print ('sqlite3 connection error:', er.message)
-        return None
+        return False
     return db
 
 
@@ -30,6 +30,26 @@ def read_sqllite(db,table_name,cols="*",fetch_one=False):
     # for row in all_rows:
         # print('{0} : {1}, {2}'.format(row[0], row[1], row[2]))
     return all_rows
+
+
+def get_db_details(db):
+    print("Method: get_db_details(db)")
+    query = "SELECT name FROM sqlite_master WHERE type='table';"
+    print("SQL: ",query)
+    cursor = db.cursor()
+    cursor.execute(query)
+    tables = cursor.fetchall()
+    print("Tables:",tables)
+
+    import pandas as pd
+    for table_name in tables:
+        table_name = table_name[0]
+        table = pd.read_sql_query("SELECT * from %s" % table_name, db)
+        print("writing file: ",table_name + '.csv')
+        table.to_csv(table_name + '.csv', encoding='utf-8')
+        # print(table.to_csv(table_name + '.csv', index_label='index'))
+        # print(table_name+": ",table)
+        mm.write_file(table, table_name + '.csv', mode='w', tag=False)
 
 
 def main():

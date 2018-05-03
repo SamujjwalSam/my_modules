@@ -533,10 +533,6 @@ def unique_words_class(class_corpuses, k_unique_words=25):
     return unique_words
 
 
-# def sam_vectorizer(dict_items):
-
-
-
 def vectorizer(list_items,n_grams=1,min_df=1,dense=True,sublinear_tf=False,smooth_idf=True):
     from sklearn.feature_extraction.text import TfidfVectorizer
     from nltk.corpus import stopwords

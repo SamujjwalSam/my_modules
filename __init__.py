@@ -13,7 +13,7 @@ from .time_modules import get_date_time_tag
 from .file_modules import get_dataset_path,read_unlabeled_json,read_labeled,\
     read_smerp_labeled,read_json_array,write_file,read_file,read_files_folder,\
     save_json,read_json,train_test_read_split,save_pickle,load_pickle,\
-    read_json_array_nochange
+    read_json_array_nochange,read_nips_papers,read_Semantic_Scholar,read_xlsx
 
 from .data_modules import tag_dict,merge_dicts,split_data,randomize_dict,\
     parse_tweets,parse_tweet,remove_symbols,get_acronyms,count_class,\
@@ -34,7 +34,7 @@ from .perform_modules import sklearn_metrics,accuracy_multi,get_feature_result
 from .w2v_modules import init_w2v,open_word2vec,use_word2vec,find_sim,\
     find_sim_list,expand_tweet,expand_tweets,create_w2v
 
-from .db_modules import connect_sqllite,read_sqllite
+from .db_modules import connect_sqllite,read_sqllite,get_db_details
 
 from .nlp_modules import process_spacy,most_similar_spacy,process_dict_spacy,\
     spelling_correction

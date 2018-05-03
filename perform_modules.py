@@ -13,6 +13,9 @@ def sklearn_metrics(actual,predicted,class_names=None,digits=4,print_result=Fals
     from sklearn.metrics import precision_recall_fscore_support
 
     results = OrderedDict()
+    
+    print("actual:",actual)
+    print("predicted:",predicted)
 
     if len(actual) != len(predicted):
         print("actual, predicted length not same: ",len(actual),len(predicted))

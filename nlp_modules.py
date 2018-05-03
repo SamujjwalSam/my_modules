@@ -112,6 +112,12 @@ def most_similar_spacy(word, k=10):
     return sim_list
 
 
+def pos_nltk(str):
+    import nltk
+    text = nltk.word_tokenize(str)
+    return nltk.pos_tag(text)
+
+
 def spelling_correction(tweet):
     from textblob import TextBlob
     b = TextBlob(tweet)

@@ -10,4 +10,4 @@ setup(name='my_modules',
       packages=['my_modules'],
       zip_safe=False,
       install_requires=['textblob', 'numpy', 'nltk', 'scikit-learn', 'gensim',
-                        'spacy'])
+                        'spacy', 'pandas'])

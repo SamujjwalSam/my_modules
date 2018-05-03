@@ -284,6 +284,7 @@ def read_files_folder(folder, mode='r',type='json'):
 
 
 def save_json(data, filename, tag=False):
+    print("Saving JSON file: ", filename + ".json")
     try:
         if tag:
             with open(date_time_tag + filename + ".json", 'w') as outfile:
@@ -381,7 +382,46 @@ def read_results(result_file_name):
         dataset,param,value = name.split()
 
 
+def read_nips_papers():
+    dataset_name="nips-papers"
+    db_name     ="nips-papers_db.sqlite"
+
+    nips_db = mm.connect_sqllite(dataset_name,db_name)
+    mm.get_db_details(nips_db)
+    # read_sqllite(nips_db,table_name,cols="*",fetch_one=False)
+
+
+def read_Semantic_Scholar():
+    dataset_name="Semantic_Scholar"
+    dataset_file="papers-2017-02-21_80.json"
+    sem_scho = OrderedDict()
+    with open(os.path.join(mm.get_dataset_path(),dataset_name,dataset_file),'r',
+        encoding="utf-8") as in_file:
+        for line in in_file:
+            # line = line.decode('unicode_escape').encode('ascii','ignore') # to remove unicode characters
+            line = json.loads(line)
+            sem_scho[line['id']] = line['paperAbstract']
+    # print(sem_scho)
+    print(len(sem_scho))
+    mm.save_json(sem_scho,'sem_scho')
+    # write_file(sem_scho,'sem_scho', mode='w', tag=False)
+    # save_pickle(sem_scho,'sem_scho', tag=False)
+
+
+def read_xlsx(file,sheets=""):
+    """Reads xlsx file as pandas dataframe for each sheet"""
+    import pandas as pd
+    data = pd.ExcelFile(file, sheet_name=sheets)
+    xlsx_obj = OrderedDict()
+    for sheet in data.sheet_names:
+        xlsx_obj[sheet] = data.parse(sheet)
+    print(data.sheet_names)
+    return data, xlsx_obj
+
+
 def main():
+    read_nips_papers()
+    return
     dict1 = {1:{}, 2:{}}
     dict1 = OrderedDict(dict1)
     dict1 = mm.tag_dict(dict1, 'h')

@@ -411,7 +411,7 @@ def update_matrix_CNE(matrix, cls_freq_dict, feature_list, doc_freq_dict,
                     if matrix[d, i] <= 1.0:
                         if d % 5000 == 0:
                             print("cf:",cls_freq_dict[feature],"df:",
-                                  doc_freq_dict[feature])
+                                  doc_freq_dict[feature], "term:",feature)
                             # print("test_name",test)
                             # print("class tokens:",len(cls_freq_dict),"total tokens:",len(doc_freq_dict))
                             print("matrix_TFIDF["+str(d)+","+str(i)+"]:",matrix[d,i])
@@ -442,18 +442,18 @@ def update_matrix_CNE(matrix, cls_freq_dict, feature_list, doc_freq_dict,
                                 if d % 5000 == 0:
                                     print("alpha",alpha)
                                 change = (alpha * IW) * ((1 - alpha) * NE)
-                            if test == "mul":
+                            if test == "k":
                                 if d % 5000 == 0:
                                     print("k",alpha)
                                 change = (IW * NE) / alpha
-                            if test == "add":
-                                if d % 5000 == 0:
-                                    print("k",alpha)
-                                change = (IW + NE) / alpha
-                            if test == "iw":
-                                if d % 5000 == 0:
-                                    print("k",alpha)
-                                change = IW / alpha
+                            # if test == "add":
+                                # if d % 5000 == 0:
+                                    # print("k",alpha)
+                                # change = (IW + NE) / alpha
+                            # if test == "iw":
+                                # if d % 5000 == 0:
+                                    # print("k",alpha)
+                                # change = IW / alpha
                             matrix[d, i] += change
 
                             if d % 5000 == 0:
