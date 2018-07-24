@@ -1,0 +1,11 @@
+unidecode
+numpy
+scipy==1.1.0
+scikit-learn==0.19.1
+matplotlib==2.2.2
+textblob
+numpy
+nltk
+gensim
+spacy
+pandas

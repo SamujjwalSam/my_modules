@@ -1,18 +1,29 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import sys,platform
-if platform.system() == 'Windows':
-    sys.path.append('D:\GDrive\Dropbox\IITH\\0 Research')
-    sys.path.append('D:\GDrive\Dropbox\IITH\\0 Research\Datasets')
-else:
-    sys.path.append('/home/cs16resch01001/codes')
-    sys.path.append('/home/cs16resch01001/datasets')
-# print(platform.system(),"os detected.")
+"""
+__synopsis__    : init file for package [my_modules]
+__description__ :
+__project__     : my_modules
+__author__      : 'Samujjwal Ghosh'
+__version__     :
+__date__        : June 2018
+__copyright__   : "Copyright (c) 2018"
+__license__     : "Python"; (Licensed under the GNU LGPL v2.1 - http://www.gnu.org/licenses/lgpl.html)
+
+__classes__     :
+
+__variables__   :
+
+__methods__     :
+
+TODO            : 1.
+"""
 
 from .time_modules import get_date_time_tag
 
 from .file_modules import get_dataset_path,read_unlabeled_json,read_labeled,\
     read_smerp_labeled,read_json_array,write_file,read_file,read_files_folder,\
-    save_json,read_json,train_test_read_split,save_pickle,load_pickle,\
+    save_json,load_json,train_test_read_split,save_pickle,load_pickle,\
     read_json_array_nochange,read_nips_papers,read_Semantic_Scholar,read_xlsx
 
 from .data_modules import tag_dict,merge_dicts,split_data,randomize_dict,\
@@ -38,3 +49,16 @@ from .db_modules import connect_sqllite,read_sqllite,get_db_details
 
 from .nlp_modules import process_spacy,most_similar_spacy,process_dict_spacy,\
     spelling_correction
+
+from .graph_modules import csr2nx,nx2csr
+
+
+import sys,platform
+if platform.system() == 'Windows':
+    sys.path.append('D:\GDrive\Dropbox\IITH\\0 Research')
+    sys.path.append('D:\Datasets')
+else:
+    sys.path.append('/home/cs16resch01001/codes')
+    sys.path.append('/home/cs16resch01001/datasets')
+    sys.path.append('/home/Embeddings')
+print(platform.system(),"os detected.")

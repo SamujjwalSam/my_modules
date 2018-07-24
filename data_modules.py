@@ -1,3 +1,24 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+__synopsis__    : Tools for data manipulation
+__description__ :
+__project__     : my_modules
+__author__      : 'Samujjwal Ghosh'
+__version__     :
+__date__        : June 2018
+__copyright__   : "Copyright (c) 2018"
+__license__     : "Python"; (Licensed under the GNU LGPL v2.1 - http://www.gnu.org/licenses/lgpl.html)
+
+__classes__     :
+
+__variables__   :
+
+__methods__     :
+
+TODO            : 1.
+"""
+
 import os, random, re
 from collections import OrderedDict
 import my_modules as mm
@@ -235,6 +256,10 @@ def remove_symbols(tweet, stopword=False, punct=False, specials=False):
     # print("punct: ", tweet)
 
     if specials:
+        trans_dict = {chars: ' ' for chars in special_chars}
+        trans_table = str.maketrans(trans_dict)
+        tweet = tweet.translate(trans_table)
+
         for pos in range(len(tweet)):
             tweet[pos] = tweet[pos].replace("@", "")
             tweet[pos] = tweet[pos].replace("#", "")

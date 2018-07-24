@@ -1,3 +1,24 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+__synopsis__    : ML related functions
+__description__ :
+__project__     : my_modules
+__author__      : 'Samujjwal Ghosh'
+__version__     :
+__date__        : June 2018
+__copyright__   : "Copyright (c) 2018"
+__license__     : "Python"; (Licensed under the GNU LGPL v2.1 - http://www.gnu.org/licenses/lgpl.html)
+
+__classes__     :
+
+__variables__   :
+
+__methods__     :
+
+TODO            : 1.
+"""
+
 import re, math
 from textblob import TextBlob as tb
 from collections import OrderedDict, defaultdict

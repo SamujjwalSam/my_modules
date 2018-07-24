@@ -1,21 +1,66 @@
-import os, json
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+__synopsis__    : Tools for file load and save on various formats.
+__description__ :
+__project__     : my_modules
+__author__      : 'Samujjwal Ghosh'
+__version__     :
+__date__        : June 2018
+__copyright__   : "Copyright (c) 2018"
+__license__     : "Python"; (Licensed under the GNU LGPL v2.1 - http://www.gnu.org/licenses/lgpl.html)
+
+__classes__     :
+
+__variables__   :
+
+__methods__     :
+
+TODO            : 1.
+"""
+
+import os,sys,json,platform,pickle
 import unicodedata
 from collections import OrderedDict
 import my_modules as mm
+from scipy import sparse
 
 
 date_time_tag = mm.get_date_time_tag()
 
 
 def get_dataset_path():
-    import platform
+    """
+
+    :return:
+    """
     if platform.system() == 'Windows':
-        dataset_path = 'D:\Datasets'
-    else:
-        dataset_path = '/home/cs16resch01001/datasets'
-    # print(platform.system(), "os detected.")
+        dataset_path = 'D:\Datasets\Extreme Classification'
+        sys.path.append('D:\GDrive\Dropbox\IITH\\0 Research')
+    elif platform.system() == 'Linux':
+        dataset_path = '/home/cs16resch01001/datasets/Extreme Classification'
+        sys.path.append('/home/cs16resch01001/codes')
+    else:  # OS X returns name 'Darwin'
+        dataset_path = '/Users/monojitdey/Downloads'
+    print(platform.system(),"os detected.")
+
     return dataset_path
 dataset_path = get_dataset_path()
+
+
+def specials_table(specials="""< >  * ? " / \ : |""",replace=' '):
+    """
+
+    :param specials:
+    :param replace:
+    :return:
+
+    usage: file_name = file_name.translate(trans_table)
+    """
+    trans_dict = {chars:replace for chars in specials}
+    trans_table = str.maketrans(trans_dict)
+
+    return trans_table
 
 
 def read_unlabeled_json(file_name):
@@ -59,20 +104,18 @@ def read_unlabeled_json_nochange(file_name):
 
 def read_labeled(labeled_file,n_classes=7,k_similar=15,k_unique_words=25):
     # print("Reading labeled Data from file: ",labeled_file)
-    if os.path.isfile(labeled_file+"features_train"+".json") and \
-        os.path.isfile(labeled_file+"features_validation"+".json")and \
-        os.path.isfile(labeled_file+"features_test"+".json"):
+    if os.path.exists(labeled_file+"features_train.json") and os.path.exists(labeled_file+"features_validation.json")and os.path.exists(labeled_file+"features_test.json"):
         print("Reading labeled Data from file: ",labeled_file+"features_validation"+".json")
         train=mm.read_json(labeled_file+"features_train")
         validation=mm.read_json(labeled_file+"features_validation")
         test=mm.read_json(labeled_file+"features_test")
-    elif os.path.isfile(labeled_file + "parsed_train" + ".json") and\
-        os.path.isfile(labeled_file + "parsed_validation" + ".json") and\
-        os.path.isfile(labeled_file + "parsed_test" + ".json"):
+    elif os.path.exists(labeled_file + "parsed_train" + ".json") and\
+        os.path.exists(labeled_file + "parsed_validation" + ".json") and\
+        os.path.exists(labeled_file + "parsed_test" + ".json"):
         print("Reading labeled Data from file: ",labeled_file+"parsed_validation"+".json")
-        train = read_json(labeled_file + "parsed_train")
-        validation = read_json(labeled_file + "parsed_validation")
-        test = read_json(labeled_file + "parsed_test")
+        train = load_json(labeled_file + "parsed_train")
+        validation = load_json(labeled_file + "parsed_validation")
+        test = load_json(labeled_file + "parsed_test")
 
         save_json(train, labeled_file + "parsed_train")
         save_json(validation, labeled_file + "parsed_validation")
@@ -90,13 +133,13 @@ def read_labeled(labeled_file,n_classes=7,k_similar=15,k_unique_words=25):
         mm.save_json(train,labeled_file+"features_train")
         mm.save_json(validation, labeled_file + "features_validation")
         mm.save_json(test,labeled_file+"features_test")
-    elif os.path.isfile(labeled_file + "train" + ".json") and\
-        os.path.isfile(labeled_file + "validation" + ".json") and\
-        os.path.isfile(labeled_file + "test" + ".json"):
+    elif os.path.exists(labeled_file + "train" + ".json") and\
+        os.path.exists(labeled_file + "validation" + ".json") and\
+        os.path.exists(labeled_file + "test" + ".json"):
         print("Reading labeled Data from file: ",labeled_file+"validation"+".json")
-        train = read_json(labeled_file + "train")
-        validation = read_json(labeled_file + "validation")
-        test = read_json(labeled_file + "test")
+        train = load_json(labeled_file + "train")
+        validation = load_json(labeled_file + "validation")
+        test = load_json(labeled_file + "test")
 
         train = mm.parse_tweets(train)
         validation = mm.parse_tweets(validation)
@@ -118,9 +161,9 @@ def read_labeled(labeled_file,n_classes=7,k_similar=15,k_unique_words=25):
         mm.save_json(train,labeled_file+"features_train")
         mm.save_json(validation, labeled_file + "features_validation")
         mm.save_json(test,labeled_file+"features_test")
-    elif os.path.isfile(labeled_file + ".json"):
+    elif os.path.exists(labeled_file + ".json"):
         print("Reading labeled Data from file: ",labeled_file + ".json")
-        labeled_dict = read_json(labeled_file)
+        labeled_dict = load_json(labeled_file)
         train, validation, test = train_test_read_split(labeled_dict)
         save_json(train, labeled_file + "train")
         save_json(validation, labeled_file + "validation")
@@ -242,20 +285,65 @@ def read_json_array_nochange(json_array_file,label=False):
     return json_array
 
 
-def write_file(data, file_name, mode='w', tag=False):
-    if tag:
-        with open(date_time_tag + file_name + ".txt", mode,
-                  encoding="utf-8") as out_file:
-            out_file.write(str(data))
-            out_file.write("\n")
-            out_file.write("\n")
-        out_file.close()
+def write_file(data,filename,file_path='',overwrite=False,mode='w',date_time_tag=''):
+    """
+    Writes to file as string
+    :param data:
+    :param filename:
+    :param file_path:
+    :param overwrite:
+    :param mode:
+    :param date_time_tag:
+    :return:
+    """
+    if not overwrite and os.path.exists(os.path.join(file_path,date_time_tag+filename+".txt")):
+        print("File already exists and Overwrite == False.")
+        return True
+    with open(os.path.join(file_path,date_time_tag+filename+".txt"),mode,encoding="utf-8") as text_file:
+        print("Saving text file: ", os.path.join(file_path,date_time_tag+filename+".txt"))
+        text_file.write(str(data))
+        text_file.write("\n")
+        text_file.write("\n")
+    text_file.close()
+    return True
+
+
+def load_npz(filename,file_path=''):
+    """
+    Loads numpy objects from npz files.
+    :param filename:
+    :param file_path:
+    :return:
+    """
+    print("Reading NPZ file: ",os.path.join(file_path,filename + ".npz"))
+    if os.path.exists(os.path.join(file_path,filename + ".npz")):
+        npz = sparse.load_npz(os.path.join(file_path,filename + ".npz"))
+        return npz
     else:
-        with open(file_name + ".txt", mode, encoding="utf-8") as out_file:
-            out_file.write(str(data))
-            out_file.write("\n")
-            out_file.write("\n")
-        out_file.close()
+        print("Warning: Could not open file: ",os.path.join(file_path,filename + ".npz"))
+        return False
+
+
+def save_npz(data,filename,file_path='',overwrite=True):
+    """
+    Saves numpy objects to file.
+    :param data:
+    :param filename:
+    :param file_path:
+    :param overwrite:
+    :return:
+    """
+    print("Saving NPZ file: ",os.path.join(file_path,filename + ".npz"))
+    if not overwrite and os.path.exists(os.path.join(file_path,filename + ".npz")):
+        print("File already exists and Overwrite == False.")
+        return True
+    try:
+        sparse.save_npz(os.path.join(file_path,filename + ".npz"),data)
+        return True
+    except Exception as e:
+        print("Could not write to npz file:",os.path.join(file_path,filename + ".npz"))
+        print("Failure reason:",e)
+        return False
 
 
 def read_file(file_name, mode='r', tag=False):
@@ -283,44 +371,56 @@ def read_files_folder(folder, mode='r',type='json'):
     return files_dict
 
 
-def save_json(data, filename, tag=False):
-    print("Saving JSON file: ", filename + ".json")
+def save_json(data,filename,file_path='',overwrite=False,indent=2,date_time_tag=''):
+    """
+
+    :param data:
+    :param filename:
+    :param file_path:
+    :param overwrite:
+    :param indent:
+    :param date_time_tag:
+    :return:
+    """
+    import json
+    print("Saving JSON file: ", os.path.join(file_path,date_time_tag+filename+".json"))
+    if not overwrite and os.path.exists(os.path.join(file_path,date_time_tag+filename+".json")):
+        print("File already exists and Overwrite == False.")
+        return True
     try:
-        if tag:
-            with open(date_time_tag + filename + ".json", 'w') as outfile:
-                outfile.write(json.dumps(data, indent=4))
-            outfile.close()
-            return True
-        else:
-            with open(filename + ".json", 'w') as outfile:
-                outfile.write(json.dumps(data, indent=4))
-            outfile.close()
-            return True
+        with open(os.path.join(file_path,date_time_tag+filename+".json"),'w') as json_file:
+            try:
+                json_file.write(json.dumps(data, indent=indent))
+            except Exception as e:
+                print("Writing json as string:",os.path.join(file_path,date_time_tag+filename+".json"))
+                json_file.write(json.dumps(str(data), indent=indent))
+                return True
+        json_file.close()
+        return True
     except Exception as e:
-        print("Could not write to file: ", filename)
-        print("Failure reason: ", e)
-        print("Writing file as plain text: ", filename + ".txt")
-        if tag:
-            write_file(data,filename,tag=True)
-            return False
-        else:
-            write_file(data,filename)
-            return False
+        print("Could not write to json file:",os.path.join(file_path,filename))
+        print("Failure reason:",e)
+        print("Writing file as plain text:",filename+".txt")
+        write_file(data,filename,date_time_tag=date_time_tag)
+        return False
 
 
-def read_json(filename, alternate=None):
-    # print("Reading JSON file: ", filename + ".json")
-    if os.path.isfile(filename + ".json"):
-        with open(filename + ".json", encoding="utf-8") as file:
+def load_json(filename,file_path='',date_time_tag=''):
+    """
+    Loads json file as python OrderedDict
+    :param filename:
+    :param file_path:
+    :param date_time_tag:
+    :return: OrderedDict
+    """
+    # print("Reading JSON file: ",os.path.join(file_path,date_time_tag+filename+".json"))
+    if os.path.exists(os.path.join(file_path,date_time_tag+filename+".json")):
+        with open(os.path.join(file_path,date_time_tag+filename+".json"), encoding="utf-8") as file:
             json_dict = OrderedDict(json.load(file))
         file.close()
         return json_dict
-    elif alternate:
-        print("Warning:", filename + " does not exist, reading ", alternate)
-        alternate = read_json(alternate)
-        return alternate
     else:
-        print("Warning: Could not open file: " + filename)
+        print("Warning: Could not open file:",os.path.join(file_path,date_time_tag+filename+".json"))
         return False
 
 
@@ -336,43 +436,58 @@ def train_test_read_split(data, test_size=0.3, validation_size=0.3):
     return train,validation,test
 
 
-def save_pickle(data, pkl_file, tag=False):
-    """saves python object as pickle file"""
-    print("Method: save_pickle(data, pkl_file, tag=False)")
-    print("Writing to pickle file: ", pkl_file)
-    import pickle
+def save_pickle(data,pkl_file_name,pkl_file_path,overwrite=False,tag=False):
+    """
+    saves python object as pickle file
+    :param data:
+    :param pkl_file_name:
+    :param pkl_file_path:
+    :param overwrite:
+    :return:
+    """
+    # print("Method: save_pickle(data, pkl, tag=False)")
+    print("Writing to pickle file: ",os.path.join(pkl_file_path,pkl_file_name + ".pkl"))
+    if not overwrite and os.path.exists(os.path.join(pkl_file_path,pkl_file_name + ".pkl")):
+        print("File already exists and Overwrite == False.")
+        return True
     try:
         if tag:
-            if os.path.isfile(date_time_tag + pkl_file):
-                print("Overwriting on pickle file: ", date_time_tag + pkl_file)
-            with open(date_time_tag + pkl_file, 'wb') as outfile:
-                pickle.dump(data, outfile)
-            outfile.close()
+            if os.path.exists(date_time_tag + os.path.join(pkl_file_path,pkl_file_name + ".pkl")):
+                print("Overwriting on pickle file: ", date_time_tag + os.path.join(pkl_file_path,pkl_file_name + ".pkl"))
+            with open(date_time_tag + os.path.join(pkl_file_path,pkl_file_name + ".pkl"), 'wb') as pkl_file:
+                pickle.dump(data,pkl_file)
+            pkl_file.close()
             return True
         else:
-            if os.path.isfile(pkl_file):
-                print("Overwriting on pickle file: ", pkl_file)
-            with open(pkl_file, 'wb') as outfile:
-                pickle.dump(data, outfile)
-            outfile.close()
+            if os.path.exists(os.path.join(pkl_file_path,pkl_file_name + ".pkl")):
+                print("Overwriting on pickle file: ", os.path.join(pkl_file_path,pkl_file_name + ".pkl"))
+            with open(os.path.join(pkl_file_path,pkl_file_name + ".pkl"), 'wb') as pkl_file:
+                pickle.dump(data,pkl_file)
+            pkl_file.close()
             return True
     except Exception as e:
-        print("Could not write to pickle file: ", pkl_file)
+        print("Could not write to pickle file: ", os.path.join(pkl_file_path,pkl_file_name + ".pkl"))
         print("Failure reason: ", e)
         return False
 
 
-def load_pickle(pkl_file):
-    """Loads pickle file to python"""
+def load_pickle(pkl_file_name,pkl_file_path):
+    """
+    Loads pickle file from files.
+    :param pkl_file_name:
+    :param pkl_file_path:
+    :return:
+    """
     print("Method: load_pickle(pkl_file)")
-    print("Reading pickle file: ", pkl_file)
-    import pickle
-    if os.path.isfile(pkl_file):
-        with open(pkl_file, 'rb') as outfile:
-            loaded = pickle.load(outfile)
-        return loaded
-    else:
-        print("Warning: Could not open file: " + pkl_file)
+    try:
+        if os.path.exists(os.path.join(pkl_file_path,pkl_file_name + ".pkl")):
+            print("Reading pickle file: ",os.path.join(pkl_file_path,pkl_file_name + ".pkl"))
+            with open(os.path.join(pkl_file_path,pkl_file_name + ".pkl"),'rb') as pkl_file:
+                loaded = pickle.load(pkl_file)
+            return loaded
+    except Exception as e:
+        print("Could not write to pickle file:", os.path.join(pkl_file_path,pkl_file_name + ".pkl"))
+        print("Failure reason:", e)
         return False
 
 
@@ -396,8 +511,8 @@ def read_Semantic_Scholar():
     dataset_file="papers-2017-02-21_80.json"
     sem_scho = OrderedDict()
     with open(os.path.join(mm.get_dataset_path(),dataset_name,dataset_file),'r',
-        encoding="utf-8") as in_file:
-        for line in in_file:
+        encoding="utf-8") as ss_file:
+        for line in ss_file:
             # line = line.decode('unicode_escape').encode('ascii','ignore') # to remove unicode characters
             line = json.loads(line)
             sem_scho[line['id']] = line['paperAbstract']
@@ -417,6 +532,19 @@ def read_xlsx(file,sheets=""):
         xlsx_obj[sheet] = data.parse(sheet)
     print(data.sheet_names)
     return data, xlsx_obj
+
+
+from scipy.io import arff
+import pandas as pd
+def load_arff(filename):
+    print(filename)
+
+    data = arff.loadarff(filename)
+    print(type(data))
+    df = pd.DataFrame(data[0])
+
+    print(df.head())
+    return data,df
 
 
 def main():
